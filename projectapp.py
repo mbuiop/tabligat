@@ -64,7 +64,7 @@ def add_ad():
 def get_global_message():
     try:
         with open('hidden/global_message.txt', 'r', encoding='utf-8') as f:
-            message = f.read()
+            message = f.read()  # تعریف متغیر message
         return jsonify({'message': message})
     except FileNotFoundError:
         return jsonify({'message': ''})
