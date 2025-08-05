@@ -27,6 +27,22 @@
     .category-btn:hover {
       transform: scale(1.05);
     }
+    .success-message {
+      display: none;
+      background-color: #34d399; /* سبز روشن */
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      margin-top: 10px;
+      transition: opacity 0.5s ease;
+    }
+    .success-message.show {
+      display: block;
+    }
+    .success-message.hide {
+      opacity: 0;
+    }
   </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -60,6 +76,7 @@
           <input id="socialId" type="text" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="آیدی را وارد کنید">
         </div>
         <p id="error" class="text-red-500 mb-4 hidden"></p>
+        <div id="success-message" class="success-message">ثبت شد</div>
         <button id="submit-ad" class="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white p-3 rounded-lg hover:from-blue-600 hover:to-blue-800">ثبت آگهی</button>
       </div>
 
@@ -150,6 +167,7 @@
       const socialId = document.getElementById('socialId').value;
       const category = document.getElementById('category').value;
       const errorElement = document.getElementById('error');
+      const successMessage = document.getElementById('success-message');
 
       if (!socialId) {
         errorElement.textContent = 'وارد کردن آیدی تلگرام یا اینستاگرام اجباری است!';
@@ -162,7 +180,13 @@
           document.getElementById('description').value = '';
           document.getElementById('socialId').value = '';
           errorElement.classList.add('hidden');
-          alert('آگهی با موفقیت ثبت شد!');
+          // نمایش پیام موفقیت
+          successMessage.classList.add('show');
+          setTimeout(() => {
+            successMessage.classList.remove('show');
+            successMessage.classList.add('hide');
+            setTimeout(() => successMessage.classList.remove('hide'), 500); // محو شدن تدریجی
+          }, 3000); // نمایش برای 3 ثانیه
         })
         .catch(error => {
           errorElement.textContent = 'خطا در ثبت آگهی!';
