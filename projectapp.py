@@ -21,6 +21,15 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Clean old ads (older than 7 days)
+def clean_old_ads():
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    seven_days_ago = time.time() - (7 * 24 * 60 * 60)  # 7 days in seconds
+    c.execute('DELETE FROM ads WHERE timestamp < ?', (seven_days_ago,))
+    conn.commit()
+    conn.close()
+
 # Create hidden directory and sample global_message.txt if not exists
 os.makedirs('hidden', exist_ok=True)
 if not os.path.exists('hidden/global_message.txt'):
@@ -28,6 +37,7 @@ if not os.path.exists('hidden/global_message.txt'):
         f.write('پیام همگانی نمونه')
 
 init_db()
+clean_old_ads()  # Clean old ads on startup
 
 @app.route('/')
 def index():
@@ -37,8 +47,8 @@ def index():
 def get_ads():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
-    c.execute('SELECT id, description, socialId, category FROM ads')
-    ads = [{'id': row[0], 'description': row[1], 'socialId': row[2], 'category': row[3]} for row in c.fetchall()]
+    c.execute('SELECT id, description, socialId, category, timestamp FROM ads')
+    ads = [{'id': row[0], 'description': row[1], 'socialId': row[2], 'category': row[3], 'timestamp': row[4]} for row in c.fetchall()]
     conn.close()
     return jsonify(ads)
 
@@ -58,13 +68,14 @@ def add_ad():
               (description, socialId, category, time.time()))
     conn.commit()
     conn.close()
+    clean_old_ads()  # Clean old ads after adding new one
     return jsonify({'message': 'آگهی با موفقیت ثبت شد'}), 201
 
 @app.route('/api/global_message', methods=['GET'])
 def get_global_message():
     try:
         with open('hidden/global_message.txt', 'r', encoding='utf-8') as f:
-            message = f.read()  # تعریف متغیر message
+            message = f.read()
         return jsonify({'message': message})
     except FileNotFoundError:
         return jsonify({'message': ''})
