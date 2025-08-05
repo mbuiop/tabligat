@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ثبت و نمایش آگهی کار</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    .nav-btn {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .nav-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    .category-btn {
+      transition: background-color 0.3s ease, transform 0.3s ease;
+    }
+    .category-btn:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans">
+  <div id="app" class="min-h-screen flex flex-col" dir="rtl">
+    <!-- Global Message -->
+    <div id="global-message" class="hidden bg-gradient-to-r from-blue-500 to-blue-700 text-white p-4 flex justify-between items-center">
+      <p id="message-text"></p>
+      <button id="delete-message" class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600">حذف</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 p-4">
+      <div id="register-section" class="hidden max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800">ثبت آگهی کار</h2>
+        <div class="mb-4">
+          <label class="block text-gray-700 mb-2">دسته‌بندی</label>
+          <select id="category" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="برنامه نویسی">برنامه نویسی</option>
+            <option value="خیاطی">خیاطی</option>
+            <option value="پشتیبانی">پشتیبانی</option>
+            <option value="رستوران">رستوران</option>
+            <option value="متفرقه">متفرقه</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block text-gray-700 mb-2">توضیحات</label>
+          <textarea id="description" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4" placeholder="توضیحات آگهی را وارد کنید"></textarea>
+        </div>
+        <div class="mb-4">
+          <label class="block text-gray-700 mb-2">آیدی تلگرام یا اینستاگرام (اجباری)</label>
+          <input id="socialId" type="text" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="آیدی را وارد کنید">
+        </div>
+        <p id="error" class="text-red-500 mb-4 hidden"></p>
+        <button id="submit-ad" class="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white p-3 rounded-lg hover:from-blue-600 hover:to-blue-800">ثبت آگهی</button>
+      </div>
+
+      <div id="list-section" class="hidden">
+        <div class="flex justify-around mb-6 overflow-x-auto">
+          <button class="category-btn px-4 py-2 bg-gray-200 rounded-lg category" data-category="برنامه نویسی">برنامه نویسی</button>
+          <button class="category-btn px-4 py-2 bg-gray-200 rounded-lg category" data-category="خیاطی">خیاطی</button>
+          <button class="category-btn px-4 py-2 bg-gray-200 rounded-lg category" data-category="پشتیبانی">پشتیبانی</button>
+          <button class="category-btn px-4 py-2 bg-gray-200 rounded-lg category" data-category="رستوران">رستوران</button>
+          <button class="category-btn px-4 py-2 bg-gray-200 rounded-lg category" data-category="متفرقه">متفرقه</button>
+        </div>
+        <div id="ads-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="fixed bottom-0 w-full bg-white shadow-2xl flex justify-around py-3">
+      <button id="register-tab" class="nav-btn flex flex-col items-center p-2 text-gray-500">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        <span>ثبت آگهی</span>
+      </button>
+      <button id="list-tab" class="nav-btn flex flex-col items-center p-2 text-gray-500">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
+        </svg>
+        <span>لیست آگهی‌ها</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    const categories = ["برنامه نویسی", "خیاطی", "پشتیبانی", "رستوران", "متفرقه"];
+    let selectedCategory = categories[0];
+
+    // Show register section by default
+    document.getElementById('register-section').classList.remove('hidden');
+    document.getElementById('register-tab').classList.add('text-blue-500');
+
+    // Fetch global message
+    axios.get('/api/global_message')
+      .then(response => {
+        const message = response.data.message;
+        if (message) {
+          document.getElementById('message-text').textContent = message;
+          document.getElementById('global-message').classList.remove('hidden');
+        }
+      })
+      .catch(error => console.error('Error fetching global message:', error));
+
+    // Delete global message
+    document.getElementById('delete-message').addEventListener('click', () => {
+      axios.delete('/api/global_message')
+        .then(() => {
+          document.getElementById('global-message').classList.add('hidden');
+        })
+        .catch(error => console.error('Error deleting global message:', error));
+    });
+
+    // Fetch ads
+    function fetchAds() {
+      axios.get('/api/ads')
+        .then(response => {
+          const ads = response.data;
+          const adsList = document.getElementById('ads-list');
+          adsList.innerHTML = '';
+          const filteredAds = ads.filter(ad => ad.category === selectedCategory);
+          filteredAds.forEach(ad => {
+            const adElement = document.createElement('div');
+            adElement.className = 'card bg-white p-4 rounded-xl shadow-lg';
+            adElement.innerHTML = `
+              <p class="text-gray-700">${ad.description}</p>
+              <p class="text-blue-500 mt-2">آیدی: ${ad.socialId}</p>
+            `;
+            adsList.appendChild(adElement);
+          });
+        })
+        .catch(error => console.error('Error fetching ads:', error));
+    }
+
+    // Initial fetch
+    fetchAds();
+
+    // Submit ad
+    document.getElementById('submit-ad').addEventListener('click', () => {
+      const description = document.getElementById('description').value;
+      const socialId = document.getElementById('socialId').value;
+      const category = document.getElementById('category').value;
+      const errorElement = document.getElementById('error');
+
+      if (!socialId) {
+        errorElement.textContent = 'وارد کردن آیدی تلگرام یا اینستاگرام اجباری است!';
+        errorElement.classList.remove('hidden');
+        return;
+      }
+
+      axios.post('/api/ads', { description, socialId, category })
+        .then(() => {
+          document.getElementById('description').value = '';
+          document.getElementById('socialId').value = '';
+          errorElement.classList.add('hidden');
+          alert('آگهی با موفقیت ثبت شد!');
+        })
+        .catch(error => {
+          errorElement.textContent = 'خطا در ثبت آگهی!';
+          errorElement.classList.remove('hidden');
+        });
+    });
+
+    // Tab navigation
+    document.getElementById('register-tab').addEventListener('click', () => {
+      document.getElementById('register-section').classList.remove('hidden');
+      document.getElementById('list-section').classList.add('hidden');
+      document.getElementById('register-tab').classList.add('text-blue-500');
+      document.getElementById('list-tab').classList.remove('text-blue-500');
+    });
+
+    document.getElementById('list-tab').addEventListener('click', () => {
+      document.getElementById('list-section').classList.remove('hidden');
+      document.getElementById('register-section').classList.add('hidden');
+      document.getElementById('list-tab').classList.add('text-blue-500');
+      document.getElementById('register-tab').classList.remove('text-blue-500');
+      fetchAds();
+    });
+
+    // Category selection
+    document.querySelectorAll('.category').forEach(button => {
+      button.addEventListener('click', () => {
+        selectedCategory = button.dataset.category;
+        document.querySelectorAll('.category').forEach(btn => btn.classList.remove('bg-blue-500', 'text-white'));
+        button.classList.add('bg-blue-500', 'text-white');
+        fetchAds();
+      });
+    });
+
+    // Set default category
+    document.querySelector('.category[data-category="برنامه نویسی"]').classList.add('bg-blue-500', 'text-white');
+  </script>
+</body>
+</html>
